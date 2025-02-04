@@ -1,0 +1,71 @@
+import math
+
+class NaiveBayesClassifier:
+    def __init__(self):
+        self.classes = {}  # Stores class probabilities
+        self.feature_probs = {}  # Stores feature probabilities per class
+
+    def train(self, X, y):
+        total_samples = len(y)
+        unique_classes = set(y)
+        
+        # Count class occurrences
+        class_counts = {c: y.count(c) for c in unique_classes}
+        self.classes = {c: class_counts[c] / total_samples for c in unique_classes}
+        
+        # Initialize feature probabilities
+        self.feature_probs = {c: {} for c in unique_classes}
+        num_features = len(X[0])
+        
+        for c in unique_classes:
+            class_indices = [i for i in range(len(y)) if y[i] == c]
+            class_samples = [X[i] for i in class_indices]
+            
+            for j in range(num_features):
+                feature_values = [sample[j] for sample in class_samples]
+                unique_values = set(feature_values)
+                self.feature_probs[c][j] = {val: (feature_values.count(val) + 1) / (len(class_samples) + len(unique_values)) for val in unique_values}  # Laplace smoothing
+    
+    def predict(self, X_test):
+        predictions = []
+        for sample in X_test:
+            class_probabilities = {}
+            
+            for c in self.classes:
+                log_prob = math.log(self.classes[c])  # Start with prior probability
+                
+                for j, feature in enumerate(sample):
+                    if feature in self.feature_probs[c][j]:
+                        log_prob += math.log(self.feature_probs[c][j][feature])
+                    else:
+                        log_prob += math.log(1 / (sum(self.feature_probs[c][j].values()) + 1))  # Handle unseen features
+                
+                class_probabilities[c] = log_prob
+            
+            predictions.append(max(class_probabilities, key=class_probabilities.get))
+        
+        return predictions
+
+# Example Usage
+X_train = [["Red", "Sports", "Domestic"],
+           ["Blue", "SUV", "Imported"],
+           ["Red", "SUV", "Domestic"],
+           ["Green", "Sedan", "Imported"],
+           ["Blue", "Sports", "Domestic"],
+           ["Green", "SUV", "Domestic"],
+           ["Red", "Sedan", "Imported"],
+           ["Blue", "Sedan", "Domestic"],
+           ["Green", "Sports", "Imported"],
+           ["Red", "SUV", "Imported"]]
+
+y_train = ["Yes", "No", "Yes", "No", "Yes", "Yes", "No", "Yes", "No", "Yes"]
+
+X_test = [["Blue", "SUV", "Domestic"],
+          ["Red", "Sedan", "Imported"],
+          ["Green", "Sports", "Domestic"]]
+
+# Train and predict
+nb = NaiveBayesClassifier()
+nb.train(X_train, y_train)
+predictions = nb.predict(X_test)
+print("Predictions:", predictions)
