@@ -1,0 +1,96 @@
+import math
+from collections import Counter
+import random
+
+class KNN:
+    def __init__(self, k=3):
+        if not isinstance(k, int) or k <= 0:
+            raise ValueError("k must be a positive integer.")
+        self.k = k
+
+    def train(self, X_train, y_train):
+        if len(X_train) != len(y_train):
+            raise ValueError("Number of samples in X_train and y_train must match.")
+        self.X_train = X_train
+        self.y_train = y_train
+
+    def predict(self, X_test):
+        predictions = [self._predict(x) for x in X_test]
+        return predictions
+
+    def _predict(self, x):
+        distances = [self._euclidean_distance(x, x_train) for x_train in self.X_train]
+        k_nearest_indices = sorted(range(len(distances)), key=lambda i: distances[i])[:self.k]
+        k_nearest_labels = [self.y_train[i] for i in k_nearest_indices]
+        most_common = Counter(k_nearest_labels).most_common(1)
+        return most_common[0][0]
+
+    def _euclidean_distance(self, x1, x2):
+        return math.sqrt(sum((a - b)**2 for a, b in zip(x1, x2)))
+
+
+class KMeans:
+    def __init__(self, k=3, max_iterations=100):
+        if not isinstance(k, int) or k <= 0:
+            raise ValueError("k must be a positive integer.")
+        if not isinstance(max_iterations, int) or max_iterations <= 0:
+            raise ValueError("max_iterations must be a positive integer.")
+        self.k = k
+        self.max_iterations = max_iterations
+
+    def train(self, data):
+        centroids = random.sample(data, self.k)
+        for _ in range(self.max_iterations):
+            clusters = [[] for _ in range(self.k)]
+            for point in data:
+                distances = [self._euclidean_distance(point, centroid) for centroid in centroids]
+                closest_centroid_index = distances.index(min(distances))
+                clusters[closest_centroid_index].append(point)
+
+            new_centroids = []
+            for cluster in clusters:
+                if cluster:
+                    new_centroids.append(self._calculate_centroid(cluster))
+                else:  #Handle empty clusters
+                    new_centroids.append(centroids[clusters.index(cluster)])
+
+            if new_centroids == centroids:
+                break
+            centroids = new_centroids
+        self.centroids = centroids
+
+    def predict(self, data):
+        predictions = []
+        for point in data:
+            distances = [self._euclidean_distance(point, centroid) for centroid in self.centroids]
+            predictions.append(distances.index(min(distances)))
+        return predictions
+
+    def _euclidean_distance(self, x1, x2):
+        return math.sqrt(sum((a - b)**2 for a, b in zip(x1, x2)))
+
+    def _calculate_centroid(self, cluster):
+        num_dimensions = len(cluster[0])
+        centroid = [sum(point[i] for point in cluster) / len(cluster) for i in range(num_dimensions)]
+        return centroid
+
+
+# Example Usage (Remember to replace with your own data)
+
+# KNN Example
+X_train_knn = [[1, 2], [2, 3], [3, 1], [4, 3], [5, 4]]
+y_train_knn = [0, 0, 0, 1, 1]
+X_test_knn = [[2, 2], [4, 4]]
+
+knn = KNN(k=3)
+knn.train(X_train_knn, y_train_knn)
+knn_predictions = knn.predict(X_test_knn)
+print("KNN Predictions:", knn_predictions)
+
+
+# KMeans Example
+X_train_kmeans = [[1, 2], [1.5, 1.8], [5, 8], [8, 8], [1, 0.6], [9, 11]]
+kmeans = KMeans(k=2)
+kmeans.train(X_train_kmeans)
+kmeans_predictions = kmeans.predict(X_train_kmeans)
+print("KMeans Predictions:", kmeans_predictions)
